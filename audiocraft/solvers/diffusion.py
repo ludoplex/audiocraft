@@ -153,17 +153,13 @@ class DiffusionSolver(base.StandardSolver):
 
     @property
     def best_metric_name(self) -> tp.Optional[str]:
-        if self._current_stage == "evaluate":
-            return 'rvm'
-        else:
-            return 'loss'
+        return 'rvm' if self._current_stage == "evaluate" else 'loss'
 
     @torch.no_grad()
     def get_condition(self, wav: torch.Tensor) -> torch.Tensor:
         codes, scale = self.codec_model.encode(wav)
         assert scale is None, "Scaled compression models not supported."
-        emb = self.codec_model.decode_latent(codes)
-        return emb
+        return self.codec_model.decode_latent(codes)
 
     def build_model(self):
         """Build model and optimizer as well as optional Exponential Moving Average of the model.
@@ -207,7 +203,9 @@ class DiffusionSolver(base.StandardSolver):
         metrics = {
             'loss': loss.mean(), 'normed_loss': (base_loss / reference_loss).mean(),
             }
-        metrics.update(self.per_stage({'loss': loss, 'normed_loss': base_loss / reference_loss}, step))
+        metrics |= self.per_stage(
+            {'loss': loss, 'normed_loss': base_loss / reference_loss}, step
+        )
         metrics.update({
             'std_in': input_.std(), 'std_out': out.std()})
         return metrics
@@ -232,7 +230,7 @@ class DiffusionSolver(base.StandardSolver):
 
         metrics = {}
         n = 1
-        for idx, batch in enumerate(lp):
+        for batch in lp:
             x = batch.to(self.device)
             with torch.no_grad():
                 y_pred = self.regenerate(x)
