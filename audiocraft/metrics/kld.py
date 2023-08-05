@@ -181,10 +181,7 @@ class PasstKLDivergenceMetric(KLDivergenceMetric):
             if s.size(-1) > self.min_input_frames:
                 s = torch.nn.functional.pad(s, (0, self.max_input_frames - s.shape[-1]))
                 valid_segments.append(s)
-        if len(valid_segments) > 0:
-            return torch.stack(valid_segments, dim=0)
-        else:
-            return None
+        return torch.stack(valid_segments, dim=0) if valid_segments else None
 
     def _get_label_distribution(self, x: torch.Tensor, sizes: torch.Tensor,
                                 sample_rates: torch.Tensor) -> tp.Optional[torch.Tensor]:
@@ -212,7 +209,4 @@ class PasstKLDivergenceMetric(KLDivergenceMetric):
                         probs = torch.softmax(logits, dim=-1)
                         probs = probs.mean(dim=0)
                         all_probs.append(probs)
-        if len(all_probs) > 0:
-            return torch.stack(all_probs, dim=0)
-        else:
-            return None
+        return torch.stack(all_probs, dim=0) if len(all_probs) > 0 else None
